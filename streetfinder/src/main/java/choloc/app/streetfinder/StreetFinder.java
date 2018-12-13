@@ -2,7 +2,6 @@ package choloc.app.streetfinder;
 
 import java.awt.geom.Point2D.Double;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,11 +9,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.operation.TransformException;
@@ -38,22 +34,20 @@ public class StreetFinder extends GeoManipulator {
   }
 
   public List<Street> findStreetsSortedByDistance(double lat, double lon,
-      int searchSquareSideInMeters)
+      int searchSquareRadiusInMeters)
       throws TransformException, IOException, ParserConfigurationException, SAXException {
 
-    // Compute the bounding box
-    final Double here = convertToRd(new LatLon(lat, lon));
-    final int offset = searchSquareSideInMeters;
-    final Double lowerLeft = new Double(here.x - offset, here.y - offset);
-    final Double upperRight = new Double(here.x + offset, here.y + offset);
-
-    // Determine the URL
+    // Compute the bounding box and determine the URL
+    final Double here= convertToRd(new LatLon(lat, lon));
+    final BoundingBox boundingBox = new BoundingBox(here, searchSquareRadiusInMeters);
     final URL url = new URL(String
-        .format(URL_TEMPLATE, "" + lowerLeft.x, "" + lowerLeft.y, "" + upperRight.x,
-            "" + upperRight.y));
+        .format(URL_TEMPLATE, "" + boundingBox.getLowerLeft().x, "" + boundingBox.getLowerLeft().y,
+            "" + boundingBox.getUpperRight().x,
+            "" + boundingBox.getUpperRight().y));
 
     // Obtain the street information.
-    final List<ParsedStreet> parsedStreets = obtainStreets(url);
+    final List<ParsedStreet> parsedStreets = obtainWfsData(url,
+        StreetFinder::obtainStreetsFromDocument, StreetFinder::fixNextUrl);
     System.out.println("" + parsedStreets.size() + " streets found.");
 
     // Collect the street segments into one street
@@ -79,45 +73,14 @@ public class StreetFinder extends GeoManipulator {
     return result;
   }
 
-  private List<ParsedStreet> obtainStreets(URL initialUrl)
-      throws ParserConfigurationException, IOException, SAXException {
+  private static String fixNextUrl(String nextUrl) {
+    return nextUrl.replace(":/cgi-bin/mapserv.fcgi", "/nwbwegen/wfs");
+  }
 
-    // Result
-    final List<ParsedStreet> results = new ArrayList<>();
-
-    // Do this while we have a next batch
-    URL currentUrl = initialUrl;
-    while (true) {
-
-      // Obtain document
-      System.out.println("Sending request: " + currentUrl);
-      final Document document;
-      try (final InputStream inputStream = currentUrl.openStream()) {
-        final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        final DocumentBuilder builder = factory.newDocumentBuilder();
-        document = builder.parse(inputStream);
-      }
-
-      // Extract the streets
-      final NodeList nodeList = document.getElementsByTagName("nwbwegen:wegvakken");
-      results.addAll(
-          IntStream.range(0, nodeList.getLength()).mapToObj(index -> nodeList.item(index))
-              .map(StreetFinder::extractStreet).collect(Collectors.toList()));
-
-      // Check whether there are more streets to find. If there aren't, we're done.
-      final Optional<String> nextUrl = Optional.of(document).map(Document::getFirstChild).map(
-          Node::getAttributes).map(node -> node.getNamedItem("next")).map(Node::getNodeValue);
-      if (!nextUrl.isPresent()) {
-        break;
-      }
-
-      // Set current URL.
-      // HACK: the URL returned by the server is not correct.
-      currentUrl = new URL(nextUrl.get().replace(":/cgi-bin/mapserv.fcgi", "/nwbwegen/wfs"));
-    }
-
-    // Done
-    return results;
+  private static List<ParsedStreet> obtainStreetsFromDocument(Document document) {
+    final NodeList nodeList = document.getElementsByTagName("nwbwegen:wegvakken");
+    return IntStream.range(0, nodeList.getLength()).mapToObj(index -> nodeList.item(index))
+        .map(StreetFinder::extractStreet).collect(Collectors.toList());
   }
 
   private static ParsedStreet extractStreet(Node node) {
@@ -140,12 +103,6 @@ public class StreetFinder extends GeoManipulator {
     final String place = getChildNodeWithName(node, "nwbwegen:wpsnaamnen").getTextContent();
     final String municipality = getChildNodeWithName(node, "nwbwegen:gme_naam").getTextContent();
     return new ParsedStreet(street, place, municipality, polygon);
-  }
-
-  private static Node getChildNodeWithName(Node parent, String childName) {
-    final NodeList children = parent.getChildNodes();
-    return IntStream.range(0, children.getLength()).mapToObj(index -> children.item(index))
-        .filter(node -> node.getNodeName().equals(childName)).findFirst().orElse(null);
   }
 
   private static Double computeNearestPoint(List<List<Double>> polygons, Double here) {
