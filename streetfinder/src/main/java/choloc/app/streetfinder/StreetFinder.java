@@ -1,6 +1,5 @@
 package choloc.app.streetfinder;
 
-import java.awt.geom.Point2D.Double;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -38,7 +37,7 @@ public class StreetFinder extends GeoManipulator {
       throws TransformException, IOException, ParserConfigurationException, SAXException {
 
     // Compute the bounding box and determine the URL
-    final Double here= convertToRd(new LatLon(lat, lon));
+    final RdPoint here= convertToRd(new LatLon(lat, lon));
     final BoundingBox boundingBox = new BoundingBox(here, searchSquareRadiusInMeters);
     final URL url = new URL(String
         .format(URL_TEMPLATE, "" + boundingBox.getLowerLeft().x, "" + boundingBox.getLowerLeft().y,
@@ -57,10 +56,10 @@ public class StreetFinder extends GeoManipulator {
     // Compute the nearest point.
     final List<Street> result = new ArrayList<>();
     for (Entry<StreetId, List<ParsedStreet>> entry : streetsById.entrySet()) {
-      final List<List<Double>> polygons = entry.getValue().stream().map(ParsedStreet::getPolygon)
+      final List<List<RdPoint>> polygons = entry.getValue().stream().map(ParsedStreet::getPolygon)
           .collect(
               Collectors.toList());
-      final Double nearestPoint = computeNearestPoint(polygons, here);
+      final RdPoint nearestPoint = computeNearestPoint(polygons, here);
       final double distance = nearestPoint.distance(here);
       final LatLon reference = convertToLatLon(nearestPoint);
       result.add(
@@ -91,11 +90,11 @@ public class StreetFinder extends GeoManipulator {
     final String posListString = getChildNodeWithName(lineStringNode, "gml:posList")
         .getTextContent();
     final String[] splitPositions = posListString.split(" ");
-    final List<Double> polygon = new ArrayList<>();
+    final List<RdPoint> polygon = new ArrayList<>();
     for (int i = 0; i < splitPositions.length; i += 2) {
-      final double x = java.lang.Double.parseDouble(splitPositions[i]);
-      final double y = java.lang.Double.parseDouble(splitPositions[i + 1]);
-      polygon.add(new Double(x, y));
+      final double x = Double.parseDouble(splitPositions[i]);
+      final double y = Double.parseDouble(splitPositions[i + 1]);
+      polygon.add(new RdPoint(x, y));
     }
 
     // Compose result
@@ -105,11 +104,11 @@ public class StreetFinder extends GeoManipulator {
     return new ParsedStreet(street, place, municipality, polygon);
   }
 
-  private static Double computeNearestPoint(List<List<Double>> polygons, Double here) {
-    Double result = null;
-    double distance = java.lang.Double.MAX_VALUE;
-    for (List<Double> polygon : polygons) {
-      final Double currentPoint = computeNearestPointForSinglePolygon(polygon, here);
+  private static RdPoint computeNearestPoint(List<List<RdPoint>> polygons, RdPoint here) {
+    RdPoint result = null;
+    double distance = Double.MAX_VALUE;
+    for (List<RdPoint> polygon : polygons) {
+      final RdPoint currentPoint = computeNearestPointForSinglePolygon(polygon, here);
       final double currentDistance = here.distance(currentPoint);
       if (currentDistance < distance) {
         distance = currentDistance;
@@ -119,7 +118,7 @@ public class StreetFinder extends GeoManipulator {
     return result;
   }
 
-  private static Double computeNearestPointForSinglePolygon(List<Double> polygon, Double here) {
+  private static RdPoint computeNearestPointForSinglePolygon(List<RdPoint> polygon, RdPoint here) {
 
     // If there is just a single point, we have no choice.
     if (polygon.size() == 1) {
@@ -127,15 +126,15 @@ public class StreetFinder extends GeoManipulator {
     }
 
     // So we can assume that there are line segments.
-    final List<Double> candidates = new ArrayList<>();
+    final List<RdPoint> candidates = new ArrayList<>();
     for (int i = 1; i < polygon.size(); i++) {
       candidates.add(getNearestPointForLineSegment(polygon.get(i - 1), polygon.get(i), here));
     }
 
     // Choose the closest
-    Double result = null;
-    double distance = java.lang.Double.MAX_VALUE;
-    for (Double candidate : candidates) {
+    RdPoint result = null;
+    double distance = Double.MAX_VALUE;
+    for (RdPoint candidate : candidates) {
       final double currentDistance = here.distance(candidate);
       if (currentDistance < distance) {
         distance = currentDistance;
@@ -147,7 +146,7 @@ public class StreetFinder extends GeoManipulator {
     return result;
   }
 
-  private static Double getNearestPointForLineSegment(Double point1, Double point2, Double here) {
+  private static RdPoint getNearestPointForLineSegment(RdPoint point1, RdPoint point2, RdPoint here) {
 
     // In case the segment has length 0, we don't have a direction.
     final double segmentLengthSquared = point1.distanceSq(point2);
@@ -156,8 +155,8 @@ public class StreetFinder extends GeoManipulator {
     }
 
     // Use scalar projection rule to project vector (point1 - here) on vector (point1 - point2).
-    final Double segmentVector = new Double(point2.x - point1.x, point2.y - point1.y);
-    final Double hereVector = new Double(here.x - point1.x, here.y - point1.y);
+    final RdPoint segmentVector = new RdPoint(point2.x - point1.x, point2.y - point1.y);
+    final RdPoint hereVector = new RdPoint(here.x - point1.x, here.y - point1.y);
     double dotProduct = segmentVector.x * hereVector.x + segmentVector.y * hereVector.y;
     double scalar = dotProduct / segmentLengthSquared;
 
@@ -165,16 +164,16 @@ public class StreetFinder extends GeoManipulator {
     double adjustedScalar = Math.max(0, Math.min(1, scalar));
 
     // Find the point corresponding to the scalar value.
-    return new Double(point1.x + adjustedScalar * segmentVector.x,
+    return new RdPoint(point1.x + adjustedScalar * segmentVector.x,
         point1.y + adjustedScalar * segmentVector.y);
   }
 
   private static class ParsedStreet {
 
     private final StreetId streetId;
-    private final List<Double> polygon;
+    private final List<RdPoint> polygon;
 
-    public ParsedStreet(String street, String place, String municipality, List<Double> polygon) {
+    public ParsedStreet(String street, String place, String municipality, List<RdPoint> polygon) {
       if (street == null || street.trim().isEmpty()) {
         throw new IllegalArgumentException("Street is not valid.");
       }
@@ -195,7 +194,7 @@ public class StreetFinder extends GeoManipulator {
       return streetId;
     }
 
-    public List<Double> getPolygon() {
+    public List<RdPoint> getPolygon() {
       return polygon;
     }
   }

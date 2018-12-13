@@ -1,6 +1,5 @@
 package choloc.app.streetfinder;
 
-import java.awt.geom.Point2D.Double;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -34,27 +33,16 @@ public abstract class GeoManipulator {
     rdToLatLonConversion = CRS.findMathTransform(CRS.decode("EPSG:28992"), CRS.decode("EPSG:4326"));
   }
 
-  protected LatLon convertToLatLon(Double rdPoint) throws TransformException {
+  protected LatLon convertToLatLon(RdPoint rdPoint) throws TransformException {
     final Coordinate coordinate = new Coordinate(rdPoint.x, rdPoint.y);
     JTS.transform(coordinate, coordinate, rdToLatLonConversion);
     return new LatLon(coordinate.x, coordinate.y);
   }
 
-  protected Double convertToRd(LatLon latLon) throws TransformException {
+  protected RdPoint convertToRd(LatLon latLon) throws TransformException {
     final Coordinate coordinate = new Coordinate(latLon.lat, latLon.lon);
     JTS.transform(coordinate, coordinate, latLonToRdConversion);
-    return new Double(coordinate.x, coordinate.y);
-  }
-
-  public static class LatLon {
-
-    final double lat;
-    final double lon;
-
-    public LatLon(double lat, double lon) {
-      this.lat = lat;
-      this.lon = lon;
-    }
+    return new RdPoint(coordinate.x, coordinate.y);
   }
 
   protected static <T> List<T> obtainWfsData(URL initialUrl,
@@ -102,21 +90,53 @@ public abstract class GeoManipulator {
         .filter(node -> node.getNodeName().equals(childName)).findFirst().orElse(null);
   }
 
-  protected static class BoundingBox {
+  public static class LatLon {
 
-    private final Double lowerLeft;
-    private final Double upperRight;
+    final double lat;
+    final double lon;
 
-    public BoundingBox(Double center, int offset) {
-      lowerLeft = new Double(center.x - offset, center.y - offset);
-      upperRight = new Double(center.x + offset, center.y + offset);
+    public LatLon(double lat, double lon) {
+      this.lat = lat;
+      this.lon = lon;
+    }
+  }
+
+  public static class RdPoint {
+
+    final double x;
+    final double y;
+
+    public RdPoint(double x, double y) {
+      this.x = x;
+      this.y = y;
     }
 
-    public Double getLowerLeft() {
+    double distanceSq(RdPoint other) {
+      final double diffX = other.x - x;
+      final double diffY = other.y - y;
+      return diffX * diffX + diffY * diffY;
+    }
+
+    double distance(RdPoint other) {
+      return Math.sqrt(distanceSq(other));
+    }
+  }
+
+  protected static class BoundingBox {
+
+    private final RdPoint lowerLeft;
+    private final RdPoint upperRight;
+
+    public BoundingBox(RdPoint center, int offset) {
+      lowerLeft = new RdPoint(center.x - offset, center.y - offset);
+      upperRight = new RdPoint(center.x + offset, center.y + offset);
+    }
+
+    public RdPoint getLowerLeft() {
       return lowerLeft;
     }
 
-    public Double getUpperRight() {
+    public RdPoint getUpperRight() {
       return upperRight;
     }
   }
