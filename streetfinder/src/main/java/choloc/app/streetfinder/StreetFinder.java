@@ -30,7 +30,7 @@ public class StreetFinder extends GeoManipulator {
       + "&VERSION=2.0.0"
       + "&SERVICE=WFS"
       + "&typenames=nwbwegen:wegvakken"
-      + "&propertyname=stt_naam,gme_naam,geom"
+      + "&propertyname=stt_naam,gme_naam,wpsnaamnen,geom"
       + "&count=200"
       + "&bbox=%s,%s,%s,%s";
 
@@ -137,8 +137,9 @@ public class StreetFinder extends GeoManipulator {
 
     // Compose result
     final String street = getChildNodeWithName(node, "nwbwegen:stt_naam").getTextContent();
-    final String place = getChildNodeWithName(node, "nwbwegen:gme_naam").getTextContent();
-    return new ParsedStreet(street, place, polygon);
+    final String place = getChildNodeWithName(node, "nwbwegen:wpsnaamnen").getTextContent();
+    final String municipality = getChildNodeWithName(node, "nwbwegen:gme_naam").getTextContent();
+    return new ParsedStreet(street, place, municipality, polygon);
   }
 
   private static Node getChildNodeWithName(Node parent, String childName) {
@@ -216,17 +217,20 @@ public class StreetFinder extends GeoManipulator {
     private final StreetId streetId;
     private final List<Double> polygon;
 
-    public ParsedStreet(String street, String place, List<Double> polygon) {
+    public ParsedStreet(String street, String place, String municipality, List<Double> polygon) {
       if (street == null || street.trim().isEmpty()) {
         throw new IllegalArgumentException("Street is not valid.");
       }
       if (place == null || place.trim().isEmpty()) {
         throw new IllegalArgumentException("Place is not valid.");
       }
+      if (municipality == null || municipality.trim().isEmpty()) {
+        throw new IllegalArgumentException("Municipality is not valid.");
+      }
       if (polygon.isEmpty()) {
         throw new IllegalArgumentException("Polygon is not valid.");
       }
-      this.streetId = new StreetId(street, place);
+      this.streetId = new StreetId(street, place, municipality);
       this.polygon = polygon;
     }
 

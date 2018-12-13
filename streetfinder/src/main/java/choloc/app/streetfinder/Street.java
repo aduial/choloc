@@ -22,6 +22,10 @@ public class Street {
     return streetId.getPlaceName();
   }
 
+  public String getMunicipalityName() {
+    return streetId.getMunicipalityName();
+  }
+
   public double getLat() {
     return lat;
   }
