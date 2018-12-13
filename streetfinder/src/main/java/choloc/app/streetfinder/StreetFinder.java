@@ -154,6 +154,7 @@ public class StreetFinder extends GeoManipulator {
       final Double currentPoint = computeNearestPointForSinglePolygon(polygon, here);
       final double currentDistance = here.distance(currentPoint);
       if (currentDistance < distance) {
+        distance = currentDistance;
         result = currentPoint;
       }
     }
@@ -179,9 +180,12 @@ public class StreetFinder extends GeoManipulator {
     for (Double candidate : candidates) {
       final double currentDistance = here.distance(candidate);
       if (currentDistance < distance) {
+        distance = currentDistance;
         result = candidate;
       }
     }
+
+    // Done.
     return result;
   }
 
