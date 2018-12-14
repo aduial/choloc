@@ -58,7 +58,7 @@ public class MapViewer extends JMapViewer {
 				clickedPosition = candidate;
 			}
 		}
-		
+
 		// Handle clicked position
 		if (clickedPosition != null) {
 			// Set the text of the clicked position.
@@ -124,7 +124,7 @@ public class MapViewer extends JMapViewer {
 		private final String content;
 
 		public ContentPosition(Street street, String content) {
-			final boolean hasContent = content == null || content.trim().isEmpty();
+			final boolean hasContent = content != null && !content.trim().isEmpty();
 			this.position = new MapMarkerDot(null, street.getStreetName(),
 					new Coordinate(street.getLat(), street.getLon()));
 			this.position.setBackColor(hasContent ? Color.YELLOW : Color.WHITE);
@@ -138,7 +138,7 @@ public class MapViewer extends JMapViewer {
 		public String getContent() {
 			return content;
 		}
-		
+
 		public boolean isInMarker(Point point, Function<Coordinate, Point> toMapPointConverter) {
 			final Point markerCenter = toMapPointConverter.apply(position.getCoordinate());
 			return markerCenter != null && markerCenter.distance(point) < position.getRadius();
