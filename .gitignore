@@ -25,6 +25,7 @@ hs_err_pid*
 # IntelliJ
 *.iml
 
-# Gradle
-.gradle
-/build/
+# eclipse
+.project
+.settings
+.classpath
