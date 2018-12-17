@@ -168,6 +168,16 @@ public class StreetFinder extends GeoManipulator {
         point1.y + adjustedScalar * segmentVector.y);
   }
 
+  public static final void main(String[] args) throws Exception {
+    StreetFinder streetFinder = new StreetFinder();
+    final List<Street> streets = streetFinder.findStreetsSortedByDistance(52.070693, 4.285055, 500);
+//    final List<Street> streets = streetFinder.findStreetsSortedByDistance(51.507132, 4.350808, 500);
+    for (Street street : streets) {
+      System.out.println(street.getStreetName() + " (" + street.getPlaceName() + " - " + street
+          .getMunicipalityName() + ") : " + street.getDistanceInMeters());
+    }
+  }
+
   private static class ParsedStreet {
 
     private final StreetId streetId;

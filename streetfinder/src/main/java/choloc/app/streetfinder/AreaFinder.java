@@ -136,4 +136,14 @@ public class AreaFinder extends GeoManipulator {
     }
     return new Area(neighborhood.getTextContent(), municipality.getTextContent());
   }
+
+  public static final void main(String[] args) throws Exception {
+    AreaFinder areaFinder = new AreaFinder();
+//    final Set<Area> areas = areaFinder.findAreas(52.070693, 4.285055, 500);
+    final Set<Area> areas = areaFinder.findAreas(51.481580, 4.302313, 500);
+//    final Set<Area> areas = areaFinder.findAreas(51.507132, 4.350808, 500);
+    for (Area area : areas) {
+      System.out.println(area.getAreaName() + " (" + area.getMunicipality() + ")");
+    }
+  }
 }
