@@ -35,6 +35,7 @@ public class MapViewer extends JMapViewer {
 
   private transient MapMarkerDot myPositionMarker = null;
   private transient List<ContentPosition> contentPositions = Collections.emptyList();
+  private transient MapMarkerDot currentContentPosition = null;
 
   private final transient Consumer<String> resultSetter;
 
@@ -46,13 +47,13 @@ public class MapViewer extends JMapViewer {
     addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent e) {
-        setPosition(e.getPoint());
+        setMyPosition(e.getPoint());
         super.mouseClicked(e);
       }
     });
   }
 
-  private void setPosition(Point clicked) {
+  private void setMyPosition(Point clicked) {
 
     // Find clicked position (last position in list is top)
     ContentPosition clickedPosition = null;
@@ -78,11 +79,19 @@ public class MapViewer extends JMapViewer {
     }
   }
 
-  public ICoordinate getCurrentPosition() {
+  public ICoordinate getMyCurrentPosition() {
     return clone(this.myPositionMarker.getCoordinate());
   }
 
   private void retrieveSolrInfo(ContentPosition position) {
+
+    // Set the current position
+    if (currentContentPosition != null) {
+      currentContentPosition.setBackColor(Color.YELLOW);
+    }
+    currentContentPosition = position.getPosition();
+    currentContentPosition.setBackColor(Color.BLUE);
+    repaint();
 
     // Start HTML document
     final StringBuilder resultBuilder = new StringBuilder("<!DOCTYPE html><html><body>");
@@ -136,6 +145,7 @@ public class MapViewer extends JMapViewer {
 
     // Remove old positions
     removeAllMapMarkers();
+    this.currentContentPosition = null;
     this.resultSetter.accept("");
 
     // Set my current marker to green
