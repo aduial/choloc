@@ -8,6 +8,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
 
 /**
@@ -22,9 +23,9 @@ public class MapViewerApplication {
     frame.setLayout(new BorderLayout());
 
     // Create a text field for the information
-    final JTextArea infoText = new JTextArea();
-    infoText.setLineWrap(true);
-    infoText.setWrapStyleWord(true);
+    final JTextPane infoText = new JTextPane();
+    infoText.setEditable(false);
+    infoText.setContentType("text/html");
 
     // Create scroll pane for text field
     final JScrollPane infoTextScroll = new JScrollPane(infoText);

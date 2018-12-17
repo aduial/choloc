@@ -75,7 +75,6 @@ public class MapViewer extends JMapViewer {
       myPositionMarker = new MapMarkerDot(null, "My position", clone(coordinate));
       myPositionMarker.setBackColor(Color.RED);
       addMapMarker(myPositionMarker);
-      this.resultSetter.accept("");
     }
   }
 
@@ -85,24 +84,31 @@ public class MapViewer extends JMapViewer {
 
   private void retrieveSolrInfo(ContentPosition position) {
 
+    // Start HTML document
+    final StringBuilder resultBuilder = new StringBuilder("<!DOCTYPE html><html><body>");
+    resultBuilder.append("<h1>").append(position.getStreet().getStreetName()).append(" (")
+        .append(position.getStreet().getPlaceName()).append(")</h1>");
+
     // Contact the Solr.
     final Map<String, String> searchResults = new Connector()
         .getSolrFTHighlights(position.getStreet().getStreetName(),
             position.getStreet().getPlaceName());
-    if (searchResults == null || searchResults.isEmpty()){
-      this.resultSetter.accept("No results found.");
-      return;
-    }
 
     // Set the results.
-    final StringBuilder resultBuilder = new StringBuilder();
-    for (Entry<String, String> entry:searchResults.entrySet()){
-      if (resultBuilder.length() != 0){
-        resultBuilder.append("\n\n");
+    if (searchResults == null || searchResults.isEmpty()) {
+      resultBuilder.append("<br><br>No results found.");
+    } else {
+      for (Entry<String, String> entry : searchResults.entrySet()) {
+        resultBuilder.append("<br><br><table style=\"border-collapse: collapse\">");
+        resultBuilder.append("<tr><td style=\"border: 1px solid black\"><b>").append(entry.getKey())
+            .append("</b></td></tr>");
+        final String textValue = entry.getValue().replace("<em>", "<b>").replace("</em>", "</b>");
+        resultBuilder.append("<tr><td>").append(textValue).append("</td></tr>").append("</table>");
       }
-      resultBuilder.append(entry.getKey()).append("\n");
-      resultBuilder.append(entry.getValue());
     }
+
+    // Finish HTML document and save the text.
+    resultBuilder.append("</body></html>");
     this.resultSetter.accept(resultBuilder.toString());
   }
 
@@ -130,6 +136,7 @@ public class MapViewer extends JMapViewer {
 
     // Remove old positions
     removeAllMapMarkers();
+    this.resultSetter.accept("");
 
     // Set my current marker to green
     myPositionMarker.setBackColor(Color.GREEN);
