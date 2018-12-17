@@ -93,15 +93,19 @@ public class MapViewer extends JMapViewer {
     currentContentPosition.setBackColor(Color.BLUE);
     repaint();
 
+    // HACK: change the placename so that it doesn't contain '-'. Helps for the Hague. In the future,
+    // we should probably exclude all characters that are not roman letters (and remove diacritics).
+    final String placeName =
+        position.getStreet().getPlaceName().replace("-", " ");
+
+    // Contact the Solr.
+    final Map<String, String> searchResults = new Connector()
+        .getSolrFTHighlights(position.getStreet().getStreetName(), placeName);
+
     // Start HTML document
     final StringBuilder resultBuilder = new StringBuilder("<!DOCTYPE html><html><body>");
     resultBuilder.append("<h1>").append(position.getStreet().getStreetName()).append(" (")
         .append(position.getStreet().getPlaceName()).append(")</h1>");
-
-    // Contact the Solr.
-    final Map<String, String> searchResults = new Connector()
-        .getSolrFTHighlights(position.getStreet().getStreetName(),
-            position.getStreet().getPlaceName());
 
     // Set the results.
     if (searchResults == null || searchResults.isEmpty()) {
